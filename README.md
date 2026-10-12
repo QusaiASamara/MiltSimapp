@@ -24,7 +24,7 @@ Follow these steps to run the Shiny application:
 2. Clone this repository to your local machine:  
 
    ```sh  
-   git clone https://github.com/QusaiASamara/Miltsim.git  
+   git clone https://github.com/QusaiASamara/Miltsimapp.git  
    cd Miltsim  
    ```  
 3. Open the R project file in RStudio.  
