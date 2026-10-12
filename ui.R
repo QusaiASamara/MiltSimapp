@@ -214,7 +214,7 @@ fluidPage(
                 selectizeInput("population", "Select Population",
                             choices = c("Pediatric Eastern African Virtual VL Population", 
                                         "WHO Virtual Population",
-                                        "Adult Eastern African Virtual VL Population",
+                                        "Eastern African Virtual VL Population",
                                         "Female Eastern African Virtual VL Population"), 
                             width = "100%"),
                 hr(class = "my-3"),
@@ -1014,11 +1014,7 @@ fluidPage(
           class = "guide-section",
           h3("6. Dose selection and PK target attainment"),
           p(
-            "For every simulated individual, MiltSim evaluates two exposure violations: AUC0-EOT above the upper target and T>EC90 below the lower target. For a candidate dose in a weight band, let n", tags$sub("upper"), " be the number above the AUC target, n", tags$sub("lower"), " the number below the T>EC90 target and n", tags$sub("total"), " the number evaluated."
-          ),
-          div(
-            class = "guide-equation",
-            HTML("I<sub>upper,i</sub> = 1[AUC<sub>0-EOT,i</sub> &gt; U<sub>AUC</sub>] &nbsp;&nbsp;&nbsp; I<sub>lower,i</sub> = 1[T&gt;EC90<sub>i</sub> &lt; L<sub>T&gt;EC90</sub>]")
+            "For every simulated individual, MiltSim evaluates two exposure violations: AUC0-EOT above the upper target and T>EC90 below the lower target. For a candidate dose in a weight band, let n", tags$sub("upper"), " be the number of subjects above the AUC target, n", tags$sub("lower"), " the number of subjects below the T>EC90 target and n", tags$sub("total"), " the total subjects evaluated."
           ),
           div(
             class = "guide-equation",
@@ -1026,10 +1022,6 @@ fluidPage(
           ),
           p(
             "Candidate doses are ranked by the combined target-violation score. The preferred dose is the dose that minimizes the total target violations across the relevant weight band(s), giving equal importance to avoiding excessive AUC and insufficient T>EC90."
-          ),
-          div(
-            class = "guide-equation",
-            HTML("&Sigma;Score<sub>WB</sub> = &Sigma;<sub>WB</sub> Score<sub>WB</sub> &nbsp;&nbsp;&nbsp; TA<sub>PK</sub>(%) = 100 - &Sigma;Score<sub>WB</sub>(%)")
           ),
           p(
             "The app also reports target-specific attainment directly as the percentage of simulated individuals without an upper- or lower-target violation:"
@@ -1058,29 +1050,17 @@ fluidPage(
             class = "guide-equation",
             HTML("Reference units/day: N<sub>reference</sub> = floor(D/50) + (D mod 50)/10")
           ),
-          tags$h4("Current MiltSim dosage-form score"),
-          p(
-            "In the current app implementation, the dosage-form summary combines PK target attainment (90% weight) with the relative improvement in pill count (10% weight). This calculation is performed separately for the upper and lower PK targets."
-          ),
-          div(
-            class = "guide-equation",
-            HTML("Pill-count improvement (%) = 100 &times; (&Sigma;N<sub>reference</sub> - &Sigma;N<sub>candidate</sub>) / &Sigma;N<sub>reference</sub>")
-          ),
-          div(
-            class = "guide-equation",
-            HTML("Score<sub>PC,target</sub> = 0.90 &times; TA<sub>PK,target</sub> + 0.10 &times; Pill-count improvement")
-          ),
           tags$h4("Adherence-adjusted methodology used in the manuscript", class = "mt-4"),
           p(
             "The manuscript and Supplementary Results S3 additionally evaluate dosage-form strength by propagating pill burden through an adherence model. The probability that individual i takes a scheduled dose is modeled with an inverse-logistic relationship:"
           ),
           div(
             class = "guide-equation",
-            HTML("P(ADH<sub>i</sub>) = logit<sup>-1</sup>(&theta;<sub>0</sub> + &theta;<sub>1</sub>N<sub>i</sub> + &eta;<sub>i</sub>) = 1 / {1 + exp[-(&theta;<sub>0</sub> + &theta;<sub>1</sub>N<sub>i</sub> + &eta;<sub>i</sub>)]}")
+            HTML("P(ADH<sub>i</sub>) = logit<sup>-1</sup>(&theta;<sub>0</sub> + &theta;<sub>1</sub>N<sub>i</sub>) = 1 / {1 + exp[-(&theta;<sub>0</sub> + &theta;<sub>1</sub>N<sub>i</sub>)]}")
           ),
           div(
             class = "guide-equation",
-            HTML("&theta;<sub>0</sub> = 3.53; &theta;<sub>1</sub> = -0.34; &eta;<sub>i</sub> ~ N(0, &omega;<sup>2</sup>), with &Omega; = 0.7")
+            HTML("&theta;<sub>0</sub> = 3.53; &theta;<sub>1</sub> = -0.34")
           ),
           div(
             class = "guide-equation",

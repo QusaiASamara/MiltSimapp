@@ -48,8 +48,8 @@ server <- function(input, output, session) {
                             minWT = common_params$minWT, maxWT = common_params$maxWT,
                             minHT = common_params$minHT, maxHT = common_params$maxHT
                           ),
-                          "Adult Eastern African Virtual VL Population" = load_imported_pop(
-                            data = "WHO_Data/joint_child_adult_sim_pop.csv",
+                          "Eastern African Virtual VL Population" = load_imported_pop(
+                            data = "WHO_Data/100boostraped_pop.csv",
                             minage = common_params$minage, maxage = common_params$maxage,
                             minWT = common_params$minWT, maxWT = common_params$maxWT,
                             minHT = common_params$minHT, maxHT = common_params$maxHT
