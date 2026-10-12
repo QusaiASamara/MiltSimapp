@@ -21,7 +21,13 @@ regimen_server <- function(id) {
         title = "Build Dosing Regimen",
         size = "l",
         easyClose = TRUE,
-        
+
+        div(
+          class = "alert alert-info",
+          tags$strong("Reference regimen first: "),
+          "when comparing regimens, save the intended reference regimen before adding comparator regimens. Default exposure limits and comparison calculations are derived from that reference."
+        ),
+
         selectInput(ns("optimization_mode"),
                     "Select Optimization Mode",
                     choices = c("Regular Mode" = "regular",
@@ -32,11 +38,11 @@ regimen_server <- function(id) {
         
         conditionalPanel(
           condition = sprintf("input['%s'] == 'dosage_form'", ns("optimization_mode")),
-          numericInput(ns("custom_dose_strength"), 
-                       "Custom Dose Strength (mg)", 
-                       value = NULL, 
-                       min = 1),          
-          helpText("Leave empty or set to NA for reference (50 mg + 10 mg tablets)"),
+          numericInput(ns("custom_dose_strength"),
+                       "Proposed Scorable Dosage Form Strength (mg)",
+                       value = NULL,
+                       min = 1),
+          helpText("Enter the proposed scorable strength for candidate dosage forms. For the Allometric FFM-based reference regimen, leave this field empty (NA)."),
         ),
         
         textInput(ns("regimen_name"), "Regimen Name", ""),

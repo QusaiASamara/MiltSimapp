@@ -6,9 +6,14 @@ create_allom_dataset <- function(data, model, weight, seed, use_loading_dose = F
                                  main_interval,
                                  weight_bands = NULL, type= c("ref", "cacl"),
                                  TSWITCH_val,
-                                 upper,lower, end,delta,mode) {  # Add weight_bands parameter
+                                 upper,lower, end,delta,mode,Utility_score_mode,dosage) {  # Add weight_bands parameter
   
   id_count <- data$ID
+  
+  ##Adherence
+  
+  THETA0 <- 3.5293918      # baseline adherence
+  THETA1 <- -0.3368967   # pill burden effect
   
   # If loading dose is enabled, create both loading and maintenance doses
   if (use_loading_dose && !is.null(load_freq) && !is.null(load_interval)) {
@@ -92,8 +97,16 @@ create_allom_dataset <- function(data, model, weight, seed, use_loading_dose = F
   }
   
   NM_Allo <- NM_Allo %>%
-    mutate(AMT = ifelse(AMT == 90, 100, AMT)) %>%
-    dplyr::select(ID, TIME, EVID, CMT, II, ADDL, AMT, AGE, SEX, HT, WT, FFM) %>% 
+    mutate(AMT = ifelse(AMT == 90, 100, AMT),
+           PILLS = ceiling(calculate_pillcount(AMT, dosage)),
+           LOGIT_ADH = THETA0 + THETA1 * PILLS,
+           ADH = if (Utility_score_mode == "dosage_form") {
+             exp(LOGIT_ADH) / (1 + exp(LOGIT_ADH))
+             } else {
+               rep(1, length(LOGIT_ADH))
+             }
+           ) %>%
+    dplyr::select(ID, TIME, EVID, CMT, II, ADDL, AMT, PILLS, ADH, AGE, SEX, HT, WT, FFM) %>% 
     arrange(ID, TIME)
   
   set.seed(seed) 

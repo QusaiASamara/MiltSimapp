@@ -9,12 +9,17 @@ create_costum_allometric_WB_dosing <- function(data, model, custom_doses, weight
                                                weight_bands_load = NULL,
                                                TSWITCH_val,
                                                upper_limit,lower_limit,
-                                               end, delta,mode) {
+                                               end, delta,mode,Utility_score_mode,dosage) {
   
   # Get the number of flags from custom_doses
   num_flags <- custom_doses$num_flags
   weight_bands <- custom_doses$weight_bands
   doses <- custom_doses$doses
+  
+  ##Adherence
+  
+  THETA0 <- 3.5293918      # baseline adherence
+  THETA1 <- -0.3368967   # pill burden effect
   
   # Generate dose matrix directly from custom_doses
   dose_matrix <- do.call(rbind, lapply(seq_along(doses), function(i) {
@@ -153,8 +158,17 @@ create_costum_allometric_WB_dosing <- function(data, model, custom_doses, weight
         AMT = ifelse(EVID == 1, Dose, 0))
   }
   All_WB_data <- All_WB_data %>%
+    mutate(
+      PILLS = ceiling(calculate_pillcount(AMT, dosage)),
+      LOGIT_ADH = THETA0 + THETA1 * PILLS,
+      ADH = if (Utility_score_mode == "dosage_form") {
+        exp(LOGIT_ADH) / (1 + exp(LOGIT_ADH))
+      } else {
+        rep(1, length(LOGIT_ADH))
+      }
+    ) %>%
     ungroup() %>%
-    dplyr::select(ID, TIME, EVID, CMT, II, ADDL, AMT, AGE, SEX, HT, WT, FFM, FLAG) %>% 
+    dplyr::select(ID, TIME, EVID, CMT, II, ADDL, AMT, PILLS, ADH, AGE, SEX, HT, WT, FFM, FLAG) %>% 
     arrange(ID, TIME)
   
   

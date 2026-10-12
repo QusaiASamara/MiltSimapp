@@ -563,7 +563,8 @@ server <- function(input, output, session) {
     # Extract maintenance dose frequency and interval
     mainta_freq <- first_regimen$maintenance_dose$frequency
     mainta_interval <- first_regimen$maintenance_dose$interval
-    
+    utility_score_mode <- first_regimen$optimization_mode
+    custom_strength <- first_regimen$custom_dose_strengt
     
     
     ref_data <- create_allom_dataset(
@@ -584,7 +585,9 @@ server <- function(input, output, session) {
       lower = NULL,
       end = input$End_sim,
       delta = input$delta_sim,
-      mode = "defulat")
+      mode = "defulat",
+      Utility_score_mode = utility_score_mode,
+      dosage = custom_strength)
     
     
     
@@ -616,6 +619,10 @@ server <- function(input, output, session) {
       current_regimen <- all_regimens[[regimen_name]]
       regimen_label <- current_regimen$name  # Ensure this is the correct field
       
+      all_regimens <- regimen_data$regimens()
+      
+
+
       # Extract values for current regimen
       dosing_strategy <- current_regimen$strategy
       use_loading_dose <- !is.null(current_regimen$loading_dose)
@@ -626,7 +633,8 @@ server <- function(input, output, session) {
       maint_interval <- current_regimen$maintenance_dose$interval
       weight_bands <- current_regimen$loading_dose$weight_bands
       custom_doses <- current_regimen$custom_doses
-      
+      utility_score_mode <- current_regimen$optimization_mode
+      custom_strength <- current_regimen$custom_dose_strength
       
       
       # Generate regimen based on dosing strategy
@@ -649,7 +657,9 @@ server <- function(input, output, session) {
                                     lower = lower_ci_obs_TOEC90,
                                     end = input$End_sim,
                                     delta = input$delta_sim,
-                                    mode = "defulat"),
+                                    mode = "defulat",
+                                    Utility_score_mode = utility_score_mode,
+                                    dosage = custom_strength),
                                   "Conventional" = create_lin_dataset(
                                     data = data()$WHO_data_HT_WT_FFM,
                                     model = model(),
@@ -667,7 +677,9 @@ server <- function(input, output, session) {
                                     lower = lower_ci_obs_TOEC90,
                                     end = input$End_sim,
                                     delta = input$delta_sim,
-                                    mode = "defulat"),
+                                    mode = "defulat",
+                                    Utility_score_mode = utility_score_mode,
+                                    dosage = custom_strength),
                                   "Allometric_WB" = create_allometric_WB_dosing(
                                     data = data()$WHO_data_HT_WT_FFM,
                                     model = model(),
@@ -685,7 +697,9 @@ server <- function(input, output, session) {
                                     lower = lower_ci_obs_TOEC90,
                                     end = input$End_sim,
                                     delta = input$delta_sim,
-                                    mode = "defulat"),
+                                    mode = "defulat", 
+                                    Utility_score_mode = utility_score_mode,
+                                    dosage = custom_strength),
                                   "costum_allometric_WB" = create_costum_allometric_WB_dosing(
                                     data = data()$WHO_data_HT_WT_FFM,
                                     model = model(),
@@ -704,7 +718,9 @@ server <- function(input, output, session) {
                                     lower_limit = lower_ci_obs_TOEC90,
                                     end = input$End_sim,
                                     delta = input$delta_sim,
-                                    mode = "defulat"
+                                    mode = "defulat",
+                                    Utility_score_mode = utility_score_mode,
+                                    dosage = custom_strength
                                   ))
       
       # Add the generated regimen to the list with its name
@@ -1092,48 +1108,7 @@ server <- function(input, output, session) {
     upps <- c()
     lows_TEC90 <- c()
     
-
-    if (Utility_score_mode == "dosage_form") {
-      
-      # Calculate reference pill count
-      df_ref <- AUC_TOEC90_datasets[[regimens[1]]][[1]]
-      
-      ref_summary <- df_ref %>%
-        mutate(Pillcount = calculate_pillcount(DOSE_Allometric_FFM, NA)) %>%
-        group_by(BINNED_WT) %>%
-        summarise(
-          ref_pill = mean(Pillcount, na.rm = TRUE),
-          .groups = "drop"
-        ) %>% 
-        select(BINNED_WT, ref_pill)
-      
-      # Calculate statistics for each regimen with pill count optimization
-      for (regimen in regimens) {
-        df_current <- AUC_TOEC90_datasets[[regimen]][[1]]
-        
-        current_regimen <- all_regimens[[regimen]]
-        custom_strength <- current_regimen$custom_dose_strength  
-    
-        df <- df_current %>% ungroup() %>%
-          mutate(Pillcount = calculate_pillcount(.[[grep("^DOSE_", names(.))]], custom_strength)) %>%
-          left_join(ref_summary, by = "BINNED_WT")
-        
-        # Calculate percentages with pill burden adjustment
-        low_percent <- round(0.9 * (100 - (sum(df[, grep("^COUNT_LOWER", names(df))]) /
-                                             sum(df[, grep("^COUNT_BIN", names(df))]) * 100)) +
-                               (0.1 * 100 * ((sum(df$ref_pill) - sum(df$Pillcount)) /
-                                               sum(df$ref_pill))), 2)
-        
-        upp_percent <- round(0.9 * (100 - (sum(df[, grep("^COUNT_UPPER", names(df))]) / 
-                                             sum(df[, grep("^COUNT_BIN", names(df))]) * 100)) +
-                               (0.1 * 100 * ((sum(df$ref_pill) - sum(df$Pillcount)) /
-                                               sum(df$ref_pill))), 2)
-        
-        lows <- c(lows, low_percent)
-        upps <- c(upps, upp_percent)
-      }
-      
-    } else if (Utility_score_mode == "regular") {
+  if (Utility_score_mode == "regular" || Utility_score_mode == "dosage_form") {
       # ORIGINAL CODE (no dosage optimization)
       for (regimen in regimens) {
         df_current <- AUC_TOEC90_datasets[[regimen]][[1]]

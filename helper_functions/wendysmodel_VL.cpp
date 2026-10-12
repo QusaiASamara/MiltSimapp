@@ -28,6 +28,8 @@ HT = 70;
 SEX = 70;
 FLAG = 1;
 TSWITCH = 0 // Time after which to start calculating EOC AUC (e.g., day 58)
+ADH   = 0.95   
+PILLS = 1
 
 
 $CMT @annotated
@@ -39,10 +41,10 @@ TEC90   : 5 MF Time to reach 90% of EC90 (hr)
 Cmax_track : 6 MF Cmax (mg/L)
 Tmax_track : 7 MF Tmax (hr)
 AUCEOC : 8 AUCEOC
-  
 
-  
-  
+
+
+
 $OMEGA @annotated
 ETA1          : 0.0384  : CL
 ETA2          : 0.503    : COVF1 F1
@@ -62,6 +64,8 @@ double EC90 = 10.6;
 double h0     = THETA9;
 double I50    = THETA10;
 
+std::bernoulli_distribution take_dose(ADH);
+double ADHERENCE = (EVID == 1) ? (double)take_dose(rng_eng) : 1.0;
 
 
 if(ID != last_id) {
@@ -70,7 +74,7 @@ if(ID != last_id) {
 }
 
 if(EVID == 1) {
-  cumamt += AMT;
+  cumamt += AMT * ADHERENCE;
 }
 
 if(ID != last_id_ec90) {
@@ -78,7 +82,7 @@ if(ID != last_id_ec90) {
   last_id_ec90 = ID;
 }
 
-double CDOSE = cumamt/WT;
+double CDOSE = (cumamt > 0) ? cumamt/WT : 1e-6;
 
 double FLAG1 = (TIME < 168) ? 1 : 0;
 double FLAG2 = (TIME >= 168) ? 1 : 0;
@@ -92,7 +96,7 @@ double MFW1   =  (FLAG1*VL*TVF*MFVL) + (FLAG2*TVF);
 // cdose
 double MFDOSE = pow(CDOSE,THETA7) ;
 
-F_DEPO  =  TVF * MFW1 * MFDOSE ;
+F_DEPO  =  TVF * MFW1 * MFDOSE * ADHERENCE;
 
 
 double K20 = CL/V2  ;
@@ -105,6 +109,7 @@ Tmax_track_0 = 0;
 
 
 $GLOBAL
+#include <random>
 #define A1 (DEPO) 
 #define A2 (CENT) 
 #define A3 (PERI) 
@@ -113,7 +118,7 @@ static double cumamt = 0;
 static double last_id = -1;
 static double time_to_ec90 = -1;  
 static double last_id_ec90 = -1;  
-
+static std::mt19937 rng_eng(std::random_device{}());
 
 
 $ODE
@@ -166,4 +171,4 @@ if(TIME >= TSWITCH) {
 
 
 $CAPTURE
-A1 A2 A3 CONC_CENT T_EC90 TOEC90 AUC_inf MFW1 MFDOSE F_DEPO Cmax Tmax WT HT AGE FFM SEX FLAG AMT h CDOSE
+A1 A2 A3 CONC_CENT T_EC90 TOEC90 AUC_inf MFW1 MFDOSE F_DEPO PILLS ADH ADHERENCE Cmax Tmax WT HT AGE FFM SEX FLAG AMT h CDOSE
