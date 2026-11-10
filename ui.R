@@ -661,6 +661,8 @@ fluidPage(
                               div(class = "card shadow-sm mb-4 h-100",
                                   div(class = "card-header bg-primary text-white",
                                       h4("PK Statistics", class = "m-0")),
+                                  actionButton("customize_range", label = div(icon("sliders-h"), "Select statistical range"), 
+                                               class = "btn btn-outline-light btn-sm"),
                                   div(class = "card-body",
                                       withSpinner(gt_output("pk_stat"), type = 7)
                                   )

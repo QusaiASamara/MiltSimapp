@@ -1,5 +1,5 @@
 
-pk_summary <- function(data_stat,treatment_duration) {
+pk_summary <- function(data_stat,treatment_duration,range_type) {
   
   data_tot <- data_stat %>%
     mutate(TIME = TIME/24, AUC = AUC/24, TEC90 = TEC90/24, Tmax = Tmax/24)
@@ -26,8 +26,8 @@ pk_summary <- function(data_stat,treatment_duration) {
     ungroup() %>%
     summarise(
       Median = round(median(C_max, na.rm = TRUE),2),
-      IQR_low = round(quantile(C_max, 0.25, na.rm = TRUE),2),
-      IQR_upp = round(quantile(C_max, 0.75, na.rm = TRUE),2)) %>% 
+      IQR_low = round(quantile(C_max,ifelse(range_type=="perc_95",0.05, 0.25), na.rm = TRUE),2),
+      IQR_upp = round(quantile(C_max, ifelse(range_type=="perc_95",0.95, 0.75), na.rm = TRUE),2)) %>% 
     mutate(Metric = "Cmax (mg/L)") %>%
     as.data.frame()
 
@@ -39,8 +39,8 @@ pk_summary <- function(data_stat,treatment_duration) {
     ungroup() %>%
     summarise(
       Median = round(median(T_max, na.rm = TRUE),2),
-      IQR_low = round(quantile(T_max, 0.25, na.rm = TRUE),2),
-      IQR_upp = round(quantile(T_max, 0.75, na.rm = TRUE),2)) %>% 
+      IQR_low = round(quantile(T_max, ifelse(range_type=="perc_95",0.05, 0.25), na.rm = TRUE),2),
+      IQR_upp = round(quantile(T_max, ifelse(range_type=="perc_95",0.95, 0.75), na.rm = TRUE),2)) %>% 
     mutate(Metric = "Tmax (days)")
   
   # Summarize AUC0_D14
@@ -49,8 +49,8 @@ pk_summary <- function(data_stat,treatment_duration) {
     filter(TIME == 14) %>%
     summarise(
       Median = round(median(AUC, na.rm = TRUE),2),  # mg*day/L
-      IQR_low = round(quantile(AUC, 0.25, na.rm = TRUE),2),
-      IQR_upp = round(quantile(AUC, 0.75, na.rm = TRUE),2)) %>%
+      IQR_low = round(quantile(AUC, ifelse(range_type=="perc_95",0.05, 0.25), na.rm = TRUE),2),
+      IQR_upp = round(quantile(AUC, ifelse(range_type=="perc_95",0.95, 0.75), na.rm = TRUE),2)) %>%
     mutate(Metric = "AUC0_D14 (mg*day/L)") 
   
   # Summarize AUC0_Dlast
@@ -59,8 +59,8 @@ pk_summary <- function(data_stat,treatment_duration) {
     filter(TIME == treatment_duration) %>%
     summarise(
       Median = round(median(AUC, na.rm = TRUE),2),  # mg*day/L
-      IQR_low = round(quantile(AUC, 0.25, na.rm = TRUE),2),
-      IQR_upp = round(quantile(AUC, 0.75, na.rm = TRUE),2)) %>%
+      IQR_low = round(quantile(AUC, ifelse(range_type=="perc_95",0.05, 0.25), na.rm = TRUE),2),
+      IQR_upp = round(quantile(AUC, ifelse(range_type=="perc_95",0.95, 0.75), na.rm = TRUE),2)) %>%
     mutate(Metric = "AUC0_EOT (mg*day/L)")
 
   
@@ -70,8 +70,8 @@ pk_summary <- function(data_stat,treatment_duration) {
     ungroup()%>%
     summarise(
       Median = round(median(TEC90, na.rm = TRUE),2),  # mg*day/L
-      IQR_low = round(quantile(TEC90, 0.25, na.rm = TRUE),2),
-      IQR_upp = round(quantile(TEC90, 0.75, na.rm = TRUE),2)) %>%
+      IQR_low = round(quantile(TEC90, ifelse(range_type=="perc_95",0.05, 0.25), na.rm = TRUE),2),
+      IQR_upp = round(quantile(TEC90, ifelse(range_type=="perc_95",0.95, 0.75), na.rm = TRUE),2)) %>%
     mutate(Metric = "T>EC90 (days)")
   
     
@@ -81,8 +81,8 @@ pk_summary <- function(data_stat,treatment_duration) {
       summarize(tec90 = min(TIME)) %>%
       summarise(
         Median = round(median(tec90, na.rm = TRUE),2),  # mg*day/L
-        IQR_low = round(quantile(tec90, 0.25, na.rm = TRUE),2),
-        IQR_upp = round(quantile(tec90, 0.75, na.rm = TRUE),2)) %>%
+        IQR_low = round(quantile(tec90, ifelse(range_type=="perc_95",0.05, 0.25), na.rm = TRUE),2),
+        IQR_upp = round(quantile(tec90, ifelse(range_type=="perc_95",0.95, 0.75), na.rm = TRUE),2)) %>%
       mutate(Metric = "TEC90 (days)")
     
   

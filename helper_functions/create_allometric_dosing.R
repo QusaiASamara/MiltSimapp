@@ -130,7 +130,7 @@ create_allom_dataset <- function(data, model, weight, seed, use_loading_dose = F
   #     TYPE = "Allometric_FFM")
   
   
-  allo_FFM_pk_stat <- pk_summary(allometric_ffm_model, treatment_duration)
+  # allo_FFM_pk_stat <- pk_summary(allometric_ffm_model, treatment_duration)
   
   if(use_loading_dose == TRUE) {
     allometric_ffm <- allometric_ffm_model %>% group_by(ID) %>%
@@ -163,7 +163,7 @@ create_allom_dataset <- function(data, model, weight, seed, use_loading_dose = F
     AUC_TOEC90_Allometric_FFM = AUC_TOEC90_Allometric_FFM,
     upper_ci_obs_AUC = upper_ci_obs_AUC,
     lower_ci_obs_TOEC90 = lower_ci_obs_TOEC90,
-    stat_data = allo_FFM_pk_stat,
+    # stat_data = allo_FFM_pk_stat,
     sumplot = Allometric_FFM,
     treatment_duration = treatment_duration,
     pk_model_output = allometric_ffm_model,

@@ -27,8 +27,8 @@ create_bin <- function(data,Time, weight, mode) {
         BIN < 6 ~ "< 6",
         BIN >= 6 & BIN < 10 ~ paste0("0", BIN),
         BIN >= 10 & BIN < 30 ~ paste0(BIN),
-        BIN >= 30 & BIN < 70 ~ paste0(BIN),
-        BIN >= 70 ~ "70+"
+        BIN >= 30 & BIN < 60 ~ paste0(BIN),
+        BIN >= 70 ~ "> 60"
       ))) %>%
     group_by(BINNED_WT, FLAG) %>%
     mutate(DOSE_G = round(get_mode(AMT), 1)) %>%

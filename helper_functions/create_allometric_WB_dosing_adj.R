@@ -171,14 +171,13 @@ create_costum_allometric_WB_dosing <- function(data, model, custom_doses, weight
     dplyr::select(ID, TIME, EVID, CMT, II, ADDL, AMT, PILLS, ADH, AGE, SEX, HT, WT, FFM, FLAG) %>% 
     arrange(ID, TIME)
   
-  
   set.seed(seed)
   
   Allometric_WB_custom_model <- model %>% 
     data_set(All_WB_data) %>%
     carry.out(a.u.g) %>%
     obsaug %>%
-    param(TSWITCH= (treatment_duration + TSWITCH_val)*24)%>%
+    # param(TSWITCH= (treatment_duration + TSWITCH_val)*24)%>%
     mrgsim(delta = delta, end = end * 24) %>%
     as.data.frame()
   
@@ -192,7 +191,7 @@ create_costum_allometric_WB_dosing <- function(data, model, custom_doses, weight
       #TIME = TIME / 24,
       #TYPE = "Allometric_WB_custom")
   
-  allo_cust_WB_pk_stat <- pk_summary(Allometric_WB_custom_model, treatment_duration)
+  # allo_cust_WB_pk_stat <- pk_summary(Allometric_WB_custom_model, treatment_duration)
   
   if(use_loading_dose == TRUE) {
     Allom_WB_custom_model <- Allometric_WB_custom_model %>% group_by(ID) %>%
@@ -245,7 +244,7 @@ create_costum_allometric_WB_dosing <- function(data, model, custom_doses, weight
   
   return(list(AUC_TOEC90_Allo_WB_custom = AUC_TOEC90_Allo_WB_custom, 
               pk_model_output = Allometric_WB_custom_model,
-              stat_data = allo_cust_WB_pk_stat,
+              # stat_data = allo_cust_WB_pk_stat,
               sumplot = Allometric_WB_custom,
               DOSE_summary = DOSE_summary,
               treatment_duration = treatment_duration,

@@ -720,7 +720,19 @@ server <- function(input, output, session) {
                                     delta = input$delta_sim,
                                     mode = "defulat",
                                     Utility_score_mode = utility_score_mode,
-                                    dosage = custom_strength
+                                    dosage = custom_strength),
+                                  "Custom_schedule" = create_flexible_schedule(
+                                    data = data()$WHO_data_HT_WT_FFM,
+                                    model = model(),
+                                    custom_schedule = current_regimen$custom_schedule,
+                                    weight = input$weight,
+                                    seed = 9119,
+                                    TSWITCH_val = 0,
+                                    upper = upper_ci_obs_AUC,
+                                    lower = lower_ci_obs_TOEC90,
+                                    end = input$End_sim,
+                                    delta = input$delta_sim,
+                                    mode = "defulat"
                                   ))
       
       # Add the generated regimen to the list with its name
@@ -904,6 +916,7 @@ server <- function(input, output, session) {
     ))
   })
   
+  
   # Reactive values to store filter settings
   filter_settings <- reactiveValues(
     filter_type = NULL,
@@ -982,102 +995,143 @@ server <- function(input, output, session) {
     ggplotly(plot)
   }) #%>% bindCache(input$select_sum_plot, combined_regimens(), input$tab_selected == "Pharmacokinetics", filter_settings())
   
+  range_settings <- reactiveValues(range_type = "perc_95")
   
-  output$pk_stat <- render_gt({
-    shiny::req(combined_regimens())
-    shiny::req(input$select_sum_plot)
-    shiny::req(input$tab_selected == "Pharmacokinetics")
-    
-    data_frames <- combined_regimens()
-    
-    pk_stat_data <- lapply(data_frames, function(lst) {
-      lst[grep("^stat_data", names(lst))]
-    })
-    validate(
-      need(pk_stat_data[[input$select_sum_plot]], "No PK data found for selected regimen"),
-      need(pk_stat_data[[input$select_sum_plot]][["stat_data"]], "PK data is missing")
+  observeEvent(input$customize_range, {
+    showModal(
+      modalDialog(
+        title = "Select statistical range",
+        selectInput(
+          "Range_type",
+          "Range by:",
+          choices = c(
+            "IQR (25–75%)" = "IQR",
+            "5th–95th percentile" = "perc_95"
+          ),
+          selected = range_settings$range_type
+        ),
+        footer = tagList(
+          modalButton("Cancel"),
+          actionButton("apply_range", "Apply")
+        ),
+        easyClose = TRUE
+      )
     )
-    
-    
-    
-    
-    pk_statistic <- pk_stat_data[[input$select_sum_plot]][["stat_data"]] %>% as.data.frame()
-    
-    column_names <- colnames(pk_statistic)
-    
-    extracted_numbers <- str_extract(column_names, "\\d+")
-    
-    # Convert the extracted numbers to numeric
-    extracted_numbers <- as.numeric(extracted_numbers)
-    
-    pk_statistic <- pk_statistic %>%
-      rename_with(~ paste0("children (", extracted_numbers [2] , ")"), .cols = starts_with("Children")) %>%
-      rename_with(~ paste0("Adults (", extracted_numbers [3], ")"), .cols = starts_with("Adults")) %>%
-      rename_with(~ paste0("Total (", extracted_numbers [4], ")"), .cols = starts_with("Total"))
-    
-    pk_statistic <- pk_statistic %>%
-      gt() %>%
-      # Add a title and subtitle
-      tab_header(
-        title = md("**Miltefosine Exposure, Median (IQR)**"),
-        subtitle = md(paste0(
-          "Summary of exposure parameters for the **",
-          input$select_sum_plot,
-          "** dosing regimen"
-        ))
-      ) %>%
-      # Add a footnote explaining abbreviations
-      tab_footnote(
-        footnote = md(paste0(
-          "Data are presented as median (IQR). Abbreviations: **AUC0_D14**, ",
-          "area under the concentration-time curve from day 0 to day 14; ",
-          "**AUC0_EOT**, area under the concentration-time curve until the end of treatment; ",
-          "**Cmax**, maximum observed concentration; **T>EC90**, ",
-          "time above the EC90 value (10.6 mg/L); ",
-          "**TEC90**, time point at which the concentration first reaches the EC90 value; ",
-          "**Tmax**, time to reach maximum concentration."
-        )),
-        locations = cells_title(groups = "subtitle")
-      ) %>%
-      tab_footnote(
-        footnote = "Children: ≤12 years; adults: >12 years.",
-        locations = cells_column_labels(columns = starts_with("Children"))
-      ) %>%
-      tab_footnote(
-        footnote = "Children: ≤12 years; adults: >12 years.",
-        locations = cells_column_labels(columns = starts_with("Adults"))
-      ) %>%
-      # Apply custom styling for a professional look
-      tab_options(
-        table.font.size = "small",          # Set a smaller font size
-        heading.align = "center",          # Center-align the title and subtitle
-        column_labels.font.size = "medium",# Set medium size for column labels
-        table.border.top.color = "black",  # Add a top border for the table
-        table.border.bottom.color = "black",
-        data_row.padding = px(5),          # Add padding between rows
-        row.striping.include_table_body = TRUE, # Add row striping for readability
-      ) %>%
-      # Add alignment and format
-      cols_align(
-        align = "center",
-        columns = everything()
-      ) %>%
-      fmt_markdown(columns = everything())
-    
-    return(pk_statistic)
   })
-  
-  output$pk_model_stat <- render_gt({
-    shiny::req(model)
     
-    if (input$model == "L. Verrest (2023)") {
-      pk_model_param <- model_parameter_verrest()
-      return(pk_model_param)
-    } else {
-      return(gt::gt(data.frame(Message = "The summary of the selected PK model is not available")))
-    }
-  })
-  
+    observeEvent(input$apply_range, {
+      range_settings$range_type <- input$Range_type
+      removeModal()
+    })
+    
+    output$pk_stat <- render_gt({
+      shiny::req(combined_regimens())
+      shiny::req(input$select_sum_plot)
+      shiny::req(input$tab_selected == "Pharmacokinetics")
+      
+      data_frames <- combined_regimens()
+      
+      pk_stat_data <- lapply(data_frames, function(lst) {
+        lst[grep("^pk_model_output", names(lst))]
+      })
+      validate(
+        need(!is.null(pk_stat_data),
+             "PK data is missing for the selected regimen")
+      )
+      
+      pk_stat_data <- pk_stat_data[[input$select_sum_plot]][["pk_model_output"]]
+      
+      pk_statistic <- pk_summary(pk_stat_data, 
+                                 data_frames[[input$select_sum_plot]][["treatment_duration"]],
+                                 range_settings$range_type)
+      
+      pk_statistic <- pk_statistic %>% as.data.frame()
+      
+      
+      column_names <- colnames(pk_statistic)
+      
+      range_label <- switch(
+        range_settings$range_type,
+        "IQR" = "IQR (25th–75th percentile)",
+        "perc_95" = "5th–95th percentile"
+      )
+      
+      extracted_numbers <- str_extract(column_names, "\\d+")
+      
+      # Convert the extracted numbers to numeric
+      extracted_numbers <- as.numeric(extracted_numbers)
+      
+      pk_statistic <- pk_statistic %>%
+        rename_with(~ paste0("children (", extracted_numbers [2] , ")"), .cols = starts_with("Children")) %>%
+        rename_with(~ paste0("Adults (", extracted_numbers [3], ")"), .cols = starts_with("Adults")) %>%
+        rename_with(~ paste0("Total (", extracted_numbers [4], ")"), .cols = starts_with("Total"))
+      
+      pk_statistic <- pk_statistic %>%
+        gt() %>%
+        # Add a title and subtitle
+        tab_header(
+          title = md(paste0(
+            "**Miltefosine Exposure, Median (",
+            range_label,
+            ")**")),
+          subtitle = md(paste0(
+            "Summary of exposure parameters for the **",
+            input$select_sum_plot,
+            "** dosing regimen"
+          ))
+        ) %>%
+        # Add a footnote explaining abbreviations
+        tab_footnote(
+          footnote = md(paste0(
+            "Data are presented as median (selected range). Abbreviations: **AUC0_D14**, ",
+            "area under the concentration-time curve from day 0 to day 14; ",
+            "**AUC0_EOT**, area under the concentration-time curve until the end of treatment; ",
+            "**Cmax**, maximum observed concentration; **T>EC90**, ",
+            "time above the EC90 value (10.6 mg/L); ",
+            "**TEC90**, time point at which the concentration first reaches the EC90 value; ",
+            "**Tmax**, time to reach maximum concentration."
+          )),
+          locations = cells_title(groups = "subtitle")
+        ) %>%
+        tab_footnote(
+          footnote = "Children: ≤12 years; adults: >12 years.",
+          locations = cells_column_labels(columns = starts_with("Children"))
+        ) %>%
+        tab_footnote(
+          footnote = "Children: ≤12 years; adults: >12 years.",
+          locations = cells_column_labels(columns = starts_with("Adults"))
+        ) %>%
+        # Apply custom styling for a professional look
+        tab_options(
+          table.font.size = "small",          # Set a smaller font size
+          heading.align = "center",          # Center-align the title and subtitle
+          column_labels.font.size = "medium",# Set medium size for column labels
+          table.border.top.color = "black",  # Add a top border for the table
+          table.border.bottom.color = "black",
+          data_row.padding = px(5),          # Add padding between rows
+          row.striping.include_table_body = TRUE, # Add row striping for readability
+        ) %>%
+        # Add alignment and format
+        cols_align(
+          align = "center",
+          columns = everything()
+        ) %>%
+        fmt_markdown(columns = everything())
+      
+      return(pk_statistic)
+    })
+    
+    output$pk_model_stat <- render_gt({
+      shiny::req(model)
+      
+      if (input$model == "L. Verrest (2023)") {
+        pk_model_param <- model_parameter_verrest()
+        return(pk_model_param)
+      } else {
+        return(gt::gt(data.frame(Message = "The summary of the selected PK model is not available")))
+      }
+    })
+    
  
   ###########################
   ###   Summary Table     ###
@@ -1724,7 +1778,7 @@ server <- function(input, output, session) {
       ) %>%
       tab_footnote(
         footnote = md(paste0(
-          "Data are presented as median (IQR). Abbreviations: **AUC0_D14**, ",
+          "Data are presented as median (selected range). Abbreviations: **AUC0_D14**, ",
           "area under the concentration-time curve from day 0 to day 14; ",
           "**AUC0_EOT**, area under the concentration-time curve until the end of treatment; ",
           "**Cmax**, maximum observed concentration; **T>EC90**, ",

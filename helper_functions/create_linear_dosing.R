@@ -118,7 +118,7 @@ create_lin_dataset <- function(data, model,weight, seed,  use_loading_dose = FAL
   #     TIME = TIME / 24,
   #     TYPE = "Conventional")
     
-  conventional_pk_stat <- pk_summary(Conventional_model, treatment_duration)
+  # conventional_pk_stat <- pk_summary(Conventional_model, treatment_duration)
   
   if(use_loading_dose == TRUE) {
     conventional_model <- Conventional_model %>% group_by(ID) %>%
@@ -145,7 +145,7 @@ create_lin_dataset <- function(data, model,weight, seed,  use_loading_dose = FAL
   #   
   return(list(AUC_TOEC90_conventional = AUC_TOEC90_conventional,
               pk_model_output = Conventional_model,
-              stat_data = conventional_pk_stat,
+              # stat_data = conventional_pk_stat,
               sumplot = conventional,
               treatment_duration = treatment_duration,
               sens_df = NM_lin

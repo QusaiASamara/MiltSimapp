@@ -144,7 +144,7 @@ create_allometric_WB_dosing <- function(data, model, weight, seed, use_loading_d
   #     TIME = TIME / 24,
   #     TYPE = "Allometric_WB")
   
-  Allo_WB_pk_stat <- pk_summary(Allometric_WB_model, treatment_duration)
+  # Allo_WB_pk_stat <- pk_summary(Allometric_WB_model, treatment_duration)
   
   if(use_loading_dose == TRUE) {
     Allom_WB_model <- Allometric_WB_model %>% group_by(ID) %>%
@@ -181,7 +181,7 @@ create_allometric_WB_dosing <- function(data, model, weight, seed, use_loading_d
   
   return(list(AUC_TOEC90_Allo_WB = AUC_TOEC90_Allo_WB,
               pk_model_output = Allometric_WB_model,
-              stat_data = Allo_WB_pk_stat,
+              # stat_data = Allo_WB_pk_stat,
               sumplot = Allometric_WB,
               DOSE_summary = DOSE_summary,
               treatment_duration = treatment_duration,

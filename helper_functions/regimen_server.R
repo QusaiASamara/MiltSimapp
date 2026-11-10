@@ -50,7 +50,8 @@ regimen_server <- function(id) {
                     choices = c("Allometric FFM-based" = "Allometric_FFM",
                                 "Allometric WB-based" = "Allometric_WB",
                                 "Conventional (mg/kg)" = "Conventional",
-                                "Allometric Customized WB-based" = "costum_allometric_WB")),
+                                "Customized WB-based" = "costum_allometric_WB",
+                                "Custom Flexible Schedule" = "Custom_schedule")),
         
         # Custom Allometric WB Dose Input Section
         conditionalPanel(
@@ -60,6 +61,37 @@ regimen_server <- function(id) {
                     "Enter custom weight bands (comma-separated):", 
                     placeholder = "e.g., 0-5.9 kg, 6-9.9 kg, 10-14.9 kg"),
           uiOutput(ns("custom_dose_inputs"))
+        ),
+        conditionalPanel(
+          condition = sprintf(
+            "input['%s'] == 'Custom_schedule'",
+            ns("dosing_strategy")
+          ),
+          
+          h4("Flexible Dosing Schedule"),
+          
+          numericInput(
+            ns("schedule_days"),
+            "Treatment duration (days)",
+            value = 28,
+            min = 1,
+            max = 365,
+            step = 1
+          ),
+          
+          textInput(
+            ns("schedule_weight_bands"),
+            "Weight bands (kg, comma-separated)",
+            value = "6-10, 10-15, 15-20",
+            placeholder = "e.g. 0-6, 6-10, 10-15, 15-20"
+          ),
+          
+          helpText(
+            "Each band includes its lower limit and excludes its upper limit. ",
+            "Enter doses in mg."
+          ),
+          
+          uiOutput(ns("flexible_schedule_ui"))
         ),
         
         materialSwitch(ns("include_loading"), "Include a Loading Dose", value = FALSE),
@@ -344,6 +376,171 @@ regimen_server <- function(id) {
       )
     })
     
+    output$flexible_schedule_ui <- renderUI({
+      
+      req(input$dosing_strategy == "Custom_schedule")
+      req(input$schedule_days, input$schedule_weight_bands)
+      
+      n_days <- as.integer(input$schedule_days)
+      
+      validate(
+        need(
+          is.finite(n_days) && n_days >= 1 && n_days <= 365,
+          "Treatment duration must be between 1 and 365 days."
+        )
+      )
+      
+      # Parse the user-defined weight bands
+      bands <- strsplit(
+        input$schedule_weight_bands,
+        ",",
+        fixed = TRUE
+      )[[1]]
+      
+      bands <- trimws(bands)
+      bands <- bands[nzchar(bands)]
+      
+      validate(
+        need(length(bands) > 0, "Enter at least one weight band.")
+      )
+      
+      # Require labels such as 6-10 or 10-15
+      valid_format <- grepl(
+        "^\\s*[0-9]+\\.?[0-9]*\\s*-\\s*[0-9]+\\.?[0-9]*\\s*$",
+        bands
+      )
+      
+      validate(
+        need(
+          all(valid_format),
+          "Use the format lower-upper, e.g. 6-10, 10-15, 15-20."
+        )
+      )
+      
+      limits <- do.call(
+        rbind,
+        lapply(bands, function(band) {
+          
+          values <- as.numeric(
+            strsplit(band, "-", fixed = TRUE)[[1]] |>
+              trimws()
+          )
+          
+          data.frame(
+            label = band,
+            lower = values[1],
+            upper = values[2]
+          )
+        })
+      )
+      
+      validate(
+        need(
+          all(is.finite(limits$lower)) &&
+            all(is.finite(limits$upper)) &&
+            all(limits$lower >= 0) &&
+            all(limits$upper > limits$lower),
+          "Every weight band must have valid, increasing limits."
+        ),
+        need(
+          !anyDuplicated(limits$label),
+          "Weight bands must be unique."
+        ),
+        need(
+          nrow(limits) == 1 ||
+            all(limits$lower[-1] >=
+                  limits$upper[-nrow(limits)]),
+          "Weight bands must not overlap. Check their order and limits."
+        )
+      )
+      
+      # Build the table header
+      header <- tags$thead(
+        tags$tr(
+          tags$th(
+            "Treatment day",
+            style = paste(
+              "min-width: 130px;",
+              "position: sticky;",
+              "left: 0;",
+              "background: #f2f4f7;",
+              "z-index: 2;"
+            )
+          ),
+          
+          lapply(seq_along(bands), function(i) {
+            tags$th(
+              paste0(bands[i], " kg"),
+              style = paste(
+                "min-width: 125px;",
+                "text-align: center;",
+                "background: #f2f4f7;"
+              )
+            )
+          })
+        )
+      )
+      
+      # Build one row per treatment day
+      body <- tags$tbody(
+        lapply(seq_len(n_days), function(day) {
+          
+          tags$tr(
+            
+            tags$th(
+              paste("Day", day),
+              style = paste(
+                "position: sticky;",
+                "left: 0;",
+                "background: white;",
+                "z-index: 1;"
+              )
+            ),
+            
+            lapply(seq_along(bands), function(i) {
+              
+              input_id <- paste0(
+                "schedule_dose_", i, "_", day
+              )
+              
+              # Preserve values when the UI is re-rendered
+              current_value <- input[[input_id]]
+              
+              if (is.null(current_value)) {
+                current_value <- 0
+              }
+              
+              tags$td(
+                numericInput(
+                  inputId = ns(input_id),
+                  label = NULL,
+                  value = current_value,
+                  min = 0,
+                  step = 1,
+                  width = "100%"
+                )
+              )
+              
+            })
+          )
+        })
+      )
+      
+      div(
+        class = "table-responsive",
+        style = "overflow-x: auto; max-width: 100%;",
+        
+        tags$table(
+          class = "table table-bordered table-striped",
+          style = "min-width: max-content; margin-bottom: 0;",
+          
+          header,
+          body
+        )
+      )
+      
+    })
+    
     output$validation_message <- renderText({
       validation_message()
     })
@@ -420,6 +617,33 @@ regimen_server <- function(id) {
           doses = collected_doses
         ))
       }
+      
+      flexible_schedule <- NULL
+      
+      if (input$dosing_strategy == "Custom_schedule") {
+        
+        flexible_schedule <- tryCatch(
+          collect_flexible_schedule(),
+          error = function(e) {
+            validation_message(conditionMessage(e))
+            NULL
+          }
+        )
+        
+        if (is.null(flexible_schedule)) {
+          return()
+        }
+      }
+      
+      schedule_days = if (
+        input$dosing_strategy == "Custom_schedule"
+      ) {
+        as.integer(input$schedule_days)
+      } else {
+        NULL
+      }
+      
+      custom_schedule = flexible_schedule
       
       regimen_id <- paste0("regimen_", format(Sys.time(), "%Y%m%d%H%M%S"), "_", sample(1000:9999, 1))
       
@@ -505,6 +729,7 @@ regimen_server <- function(id) {
                                        "Allometric_WB" = "Allometric (Weight band-Based)",
                                        "Conventional" = "Conventional (mg/kg)",
                                        "costum_allometric_WB" = "Custom Allometric (Weight band-Based)",
+                                       "Custom_schedule" =  "Custom Flexible Schedule",
                                        regimen$strategy
               )
               
